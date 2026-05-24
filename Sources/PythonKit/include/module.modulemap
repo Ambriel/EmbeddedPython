@@ -1,0 +1,4 @@
+module PythonBridge {
+    header "PythonBridge.h"
+    export *
+}
