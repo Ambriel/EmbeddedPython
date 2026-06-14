@@ -2,15 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "PythonKit",
+    name: "EmbeddedPython",
     platforms: [
         .macOS(.v11),
         .iOS(.v13)
     ],
     products: [
         .library(
-            name: "PythonKit",
-            targets: ["PythonKit"]
+            name: "EmbeddedPython",
+            targets: ["EmbeddedPython"]
         )
     ],
     targets: [
@@ -26,15 +26,15 @@ let package = Package(
         .target(
             name: "PythonBridge",
             dependencies: ["Python"],
-            path: "Sources/PythonKit/include",
+            path: "Sources/EmbeddedPython/include",
             publicHeadersPath: "."
         ),
         // Public Swift API. Talks to CPython exclusively through PythonBridge,
         // so it never imports the `Python` module directly.
         .target(
-            name: "PythonKit",
+            name: "EmbeddedPython",
             dependencies: ["PythonBridge"],
-            path: "Sources/PythonKit",
+            path: "Sources/EmbeddedPython",
             exclude: ["include"],
             linkerSettings: [
                 .linkedLibrary("resolv"),

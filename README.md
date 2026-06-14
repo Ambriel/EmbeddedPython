@@ -1,9 +1,9 @@
-# PythonKit
+# EmbeddedPython
 
 Embed a full **CPython 3.13** interpreter inside a macOS or iOS app and run
 Python from Swift.
 
-PythonKit wraps the [BeeWare Python-Apple-support](https://github.com/beeware/Python-Apple-support)
+EmbeddedPython wraps the [BeeWare Python-Apple-support](https://github.com/beeware/Python-Apple-support)
 builds in a Swift package with a small, friendly Swift API.
 
 ## Requirements
@@ -32,7 +32,7 @@ drops them by default, but they're required to run Python on a device (see
 ## Usage
 
 ```swift
-import PythonKit
+import EmbeddedPython
 
 try PythonEngine.start()
 
@@ -69,7 +69,7 @@ iOS is more involved, and **one required step lives in your app's build, not in
 this package.** An iOS `xcframework` may only contain the library binary, so the
 standard library has to be copied into the app at build time — and every binary
 extension module (`.so`) must be repackaged as an individual code-signed
-`.framework` (iOS/App Store forbids loose `.so` files). PythonKit ships
+`.framework` (iOS/App Store forbids loose `.so` files). EmbeddedPython ships
 [BeeWare's](https://github.com/beeware/Python-Apple-support) `install_python`
 helper inside the xcframework to do exactly that.
 
@@ -110,7 +110,7 @@ The package is split into three targets:
 | -------------- | -------- | ---- |
 | `Python`       | binary   | The CPython runtime + headers (`Python.xcframework`). |
 | `PythonBridge` | C        | Thin shim that calls the CPython C API and exposes plain C functions. |
-| `PythonKit`    | Swift    | Public API (`PythonEngine`, `PythonError`). |
+| `EmbeddedPython` | Swift  | Public API (`PythonEngine`, `PythonError`). |
 
 Why the C shim? The `Python.xcframework` ships its Clang module map in a
 non-standard location, so Swift can't `import Python` directly — and re-exporting
@@ -118,7 +118,7 @@ the `Python` module through a C shim fails the same way. `PythonBridge` sidestep
 this by making every CPython call in C and exposing **only plain C types** across
 the bridge. Because its public header never includes `<Python/Python.h>`, the
 Swift layer can `import PythonBridge` without needing to resolve the `Python`
-module at all. See [`PythonBridge.h`](Sources/PythonKit/include/PythonBridge.h)
+module at all. See [`PythonBridge.h`](Sources/EmbeddedPython/include/PythonBridge.h)
 for details.
 
 ## License

@@ -19,7 +19,7 @@ OUT="${ROOT}/Frameworks/Python.xcframework"
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
 
-echo "Setting up PythonKit frameworks (Python ${PYTHON_VERSION}, ${SUPPORT_BUILD})..."
+echo "Setting up EmbeddedPython frameworks (Python ${PYTHON_VERSION}, ${SUPPORT_BUILD})..."
 mkdir -p "${ROOT}/Frameworks"
 
 echo "Downloading macOS support..."
