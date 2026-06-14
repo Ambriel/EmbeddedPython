@@ -1,10 +1,23 @@
 import Foundation
 import PythonBridge
 
+/// A minimal Swift front-end for an embedded CPython 3.13 interpreter.
+///
+/// `PythonEngine` owns a single process-wide interpreter. Call ``start()`` once
+/// before running code, ``run(_:)`` to execute snippets, and ``stop()`` to tear
+/// the interpreter down. All CPython calls are funneled through the C
+/// `PythonBridge` shim; this type only manages lifecycle and environment setup.
 public final class PythonEngine {
 
     private static var isInitialized = false
 
+    /// Boots the embedded interpreter.
+    ///
+    /// Points `PYTHONHOME` / `PYTHONPATH` at the `Python.framework` bundled in
+    /// the host app, then initializes CPython. Subsequent calls are no-ops.
+    ///
+    /// - Throws: ``PythonError/initializationFailed`` if the framework cannot be
+    ///   located or the interpreter fails to start.
     public static func start() throws {
         guard !isInitialized else { return }
 
@@ -19,51 +32,36 @@ public final class PythonEngine {
         setenv("PYTHONPATH", stdlibPath.path, 1)
         setenv("PYTHONDONTWRITEBYTECODE", "1", 1)
 
-        Py_Initialize()
-
-        guard Py_IsInitialized() != 0 else {
+        guard PythonBridge_initialize() else {
             throw PythonError.initializationFailed
         }
 
         isInitialized = true
     }
 
+    /// Executes Python source and returns whatever it printed to stdout/stderr.
+    ///
+    /// - Parameter code: Python source to run.
+    /// - Returns: The captured stdout + stderr output, or an empty string if the
+    ///   snippet produced none.
+    /// - Throws: ``PythonError/notInitialized`` if ``start()`` has not been called.
     public static func run(_ code: String) throws -> String {
         guard isInitialized else {
             throw PythonError.notInitialized
         }
 
-        let captureSetup = """
-import sys, io as _io
-_pythonkit_buf = _io.StringIO()
-_pythonkit_old_stdout = sys.stdout
-_pythonkit_old_stderr = sys.stderr
-sys.stdout = _pythonkit_buf
-sys.stderr = _pythonkit_buf
-"""
-        let captureFinish = """
-sys.stdout = _pythonkit_old_stdout
-sys.stderr = _pythonkit_old_stderr
-_pythonkit_result = _pythonkit_buf.getvalue()
-"""
-
-        PyRun_SimpleString(captureSetup)
-        PyRun_SimpleString(code)
-        PyRun_SimpleString(captureFinish)
-
-        guard let main = PyImport_AddModule("__main__"),
-              let dict = PyModule_GetDict(main),
-              let resultObj = PyDict_GetItemString(dict, "_pythonkit_result"),
-              let cStr = PyUnicode_AsUTF8(resultObj) else {
+        guard let cResult = PythonBridge_run(code) else {
             return ""
         }
+        defer { free(cResult) }
 
-        return String(cString: cStr)
+        return String(cString: cResult)
     }
 
+    /// Shuts the interpreter down. Safe to call when it is not running.
     public static func stop() {
         guard isInitialized else { return }
-        Py_Finalize()
+        PythonBridge_finalize()
         isInitialized = false
     }
 }
