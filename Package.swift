@@ -15,10 +15,12 @@ let package = Package(
     ],
     targets: [
         // Embedded CPython 3.13 runtime + headers, as a universal xcframework.
-        // Not in git — run `./setup.sh` to download and assemble it.
+        // Too large for git (~246 MB); distributed as a GitHub release asset.
+        // Run `./setup.sh` to rebuild it locally; see README for re-releasing.
         .binaryTarget(
             name: "Python",
-            path: "Frameworks/Python.xcframework"
+            url: "https://github.com/Ambriel/EmbeddedPython/releases/download/v1.0.0/Python.xcframework.zip",
+            checksum: "1157294a1565f51f5446c2f8dcee25a36b931ed549df7ae2a1a2e109d7c65f41"
         ),
         // C shim over the CPython C API. Lives in its own target because Swift
         // and C sources cannot be mixed in a single SwiftPM target, and because

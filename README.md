@@ -11,23 +11,54 @@ builds in a Swift package with a small, friendly Swift API.
 - Swift 5.9+ / Xcode 15+
 - macOS 11+ or iOS 13+
 
-## Setup
+## Installation
 
-The Python runtime is a large binary `xcframework` and is **not** checked into
-git. Build it locally before opening the package:
+Add the package with Swift Package Manager:
+
+```swift
+.package(url: "https://github.com/Ambriel/EmbeddedPython", from: "1.0.0")
+```
+
+or in Xcode via **File ▸ Add Package Dependencies…** with the same URL.
+
+The CPython 3.13 runtime is a large binary `xcframework` (~80 MB zipped, ~246 MB
+on disk) and is **not** stored in git. It's published as a GitHub release asset,
+and SwiftPM downloads and checksum-verifies it automatically on first build —
+there's nothing extra to run for the macOS / SPM path.
+
+> **iOS note:** the integration below needs a stable on-disk path to the
+> xcframework, so for iOS it's more reliable to add `Python.xcframework`
+> directly to your Xcode project. Download `Python.xcframework.zip` from the
+> [latest release](https://github.com/Ambriel/EmbeddedPython/releases) (or run
+> `./setup.sh`) to obtain it.
+
+## Building the runtime locally
+
+Contributors rebuild the xcframework from BeeWare's Python-Apple-support builds:
 
 ```sh
 ./setup.sh
 ```
 
-This downloads the macOS and iOS Python 3.13 support packages and assembles a
-universal `Frameworks/Python.xcframework` (macOS arm64/x86_64, iOS device, iOS
-simulator). Once it completes, `swift build` and Xcode builds will work.
+This assembles a universal `Frameworks/Python.xcframework` (macOS arm64/x86_64,
+iOS device, iOS simulator). For iOS it also keeps the Python standard library and
+BeeWare's `build/` helper scripts inside the xcframework — `xcodebuild
+-create-xcframework` drops them by default, but they're required to run Python on
+a device (see [iOS integration](#ios-integration)).
 
-For iOS, the script also keeps the Python standard library and BeeWare's
-`build/` helper scripts inside the xcframework — `xcodebuild -create-xcframework`
-drops them by default, but they're required to run Python on a device (see
-[iOS integration](#ios-integration)).
+### Cutting a release
+
+The xcframework ships as a release asset, so SwiftPM can fetch it. After
+`./setup.sh`, zip it **preserving symlinks (`-y`) and dropping macOS xattrs
+(`-X`)** — otherwise the framework's `Versions/` symlinks break and 8k+
+AppleDouble (`._*`) files leak into the archive — then upload it and pin its
+checksum in `Package.swift`:
+
+```sh
+cd Frameworks && zip -r -y -X ../Python.xcframework.zip Python.xcframework && cd ..
+swift package compute-checksum Python.xcframework.zip   # paste into Package.swift
+gh release upload v1.0.0 Python.xcframework.zip --clobber
+```
 
 ## Usage
 
