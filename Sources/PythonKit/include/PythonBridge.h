@@ -1,7 +1,39 @@
 #ifndef PythonBridge_h
 #define PythonBridge_h
 
-// Pull in Python C API from the embedded framework
-#include <Python/Python.h>
+#include <stdbool.h>
 
-#endif
+// PythonBridge is a thin C shim over the embedded CPython C API.
+//
+// The Python C API is exposed by the `Python.xcframework` binary target. That
+// framework ships its Clang module map in a non-standard location, so the Swift
+// compiler cannot import the `Python` module directly (nor through a C shim that
+// re-exports it). To work around this, all CPython calls are made here in C, and
+// only plain C types cross the bridge. This header therefore deliberately does
+// NOT include <Python/Python.h> — keeping it Python-free is what lets Swift
+// `import PythonBridge` without needing to resolve the `Python` module itself.
+
+/// Initializes the embedded CPython interpreter.
+///
+/// `PYTHONHOME` / `PYTHONPATH` must already be set in the environment before
+/// calling. A no-op (returns true) if the interpreter is already running.
+///
+/// @return true if the interpreter is initialized, false otherwise.
+bool PythonBridge_initialize(void);
+
+/// Reports whether the embedded interpreter is currently initialized.
+bool PythonBridge_isInitialized(void);
+
+/// Executes a snippet of Python source, capturing everything it writes to
+/// stdout and stderr.
+///
+/// @param code UTF-8 Python source to run. Must not be NULL.
+/// @return A heap-allocated, NUL-terminated UTF-8 string with the captured
+///         output. The caller takes ownership and must free() it. Returns NULL
+///         if the interpreter is not initialized or `code` is NULL.
+char *PythonBridge_run(const char *code);
+
+/// Shuts down the embedded interpreter. A no-op if it is not running.
+void PythonBridge_finalize(void);
+
+#endif /* PythonBridge_h */

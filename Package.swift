@@ -14,18 +14,28 @@ let package = Package(
         )
     ],
     targets: [
+        // Embedded CPython 3.13 runtime + headers, as a universal xcframework.
+        // Not in git — run `./setup.sh` to download and assemble it.
         .binaryTarget(
             name: "Python",
             path: "Frameworks/Python.xcframework"
         ),
+        // C shim over the CPython C API. Lives in its own target because Swift
+        // and C sources cannot be mixed in a single SwiftPM target, and because
+        // the Python C API has to be reached from C (see PythonBridge.h for why).
+        .target(
+            name: "PythonBridge",
+            dependencies: ["Python"],
+            path: "Sources/PythonKit/include",
+            publicHeadersPath: "."
+        ),
+        // Public Swift API. Talks to CPython exclusively through PythonBridge,
+        // so it never imports the `Python` module directly.
         .target(
             name: "PythonKit",
-            dependencies: ["Python"],
+            dependencies: ["PythonBridge"],
             path: "Sources/PythonKit",
-            publicHeadersPath: "include",
-            cSettings: [
-                .headerSearchPath("include")
-            ],
+            exclude: ["include"],
             linkerSettings: [
                 .linkedLibrary("resolv"),
                 .linkedLibrary("z"),
