@@ -123,5 +123,14 @@ for details.
 
 ## License
 
-The bundled CPython and its support framework are distributed under the
-[PSF License](https://docs.python.org/3/license.html).
+EmbeddedPython (this Swift/C wrapper) is released under the
+[MIT License](LICENSE) — © 2026 Ambriel
+([ORCID](https://orcid.org/0009-0006-7731-8254)).
+
+The runtime it bundles carries its own (permissive) licenses, which you must
+retain when you ship an app:
+
+- **CPython** — [PSF License](https://docs.python.org/3/license.html)
+- **OpenSSL, libFFI, XZ, mpdecimal, BZip2** — vendored via
+  [BeeWare Python-Apple-support](https://github.com/beeware/Python-Apple-support);
+  see that project for each component's license.
