@@ -13,13 +13,19 @@
 // NOT include <Python/Python.h> — keeping it Python-free is what lets Swift
 // `import PythonBridge` without needing to resolve the `Python` module itself.
 
-/// Initializes the embedded CPython interpreter.
+/// Initializes the embedded CPython interpreter using `PyConfig`.
 ///
-/// `PYTHONHOME` / `PYTHONPATH` must already be set in the environment before
-/// calling. A no-op (returns true) if the interpreter is already running.
-///
+/// @param pythonHome Absolute path to use as `PYTHONHOME` (the directory whose
+///        `lib/python3.13` holds the standard library). On macOS this is inside
+///        the embedded `Python.framework`; on iOS it is the `python` folder that
+///        the app's build phase stages into the bundle. Pass NULL to fall back
+///        to CPython's default path resolution.
 /// @return true if the interpreter is initialized, false otherwise.
-bool PythonBridge_initialize(void);
+///
+/// Configured to suit an app bundle: bytecode writing is disabled (the bundle is
+/// read-only / code-signed) and UTF-8 mode is forced.
+/// A no-op (returns true) if the interpreter is already running.
+bool PythonBridge_initialize(const char *pythonHome);
 
 /// Reports whether the embedded interpreter is currently initialized.
 bool PythonBridge_isInitialized(void);

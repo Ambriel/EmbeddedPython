@@ -13,30 +13,43 @@ public final class PythonEngine {
 
     /// Boots the embedded interpreter.
     ///
-    /// Points `PYTHONHOME` / `PYTHONPATH` at the `Python.framework` bundled in
-    /// the host app, then initializes CPython. Subsequent calls are no-ops.
+    /// Resolves the Python home for the current platform, then initializes
+    /// CPython. Subsequent calls are no-ops.
     ///
-    /// - Throws: ``PythonError/initializationFailed`` if the framework cannot be
-    ///   located or the interpreter fails to start.
+    /// - Throws: ``PythonError/initializationFailed`` if the standard library
+    ///   cannot be located or the interpreter fails to start.
     public static func start() throws {
         guard !isInitialized else { return }
 
-        guard let frameworkPath = Bundle.main.privateFrameworksURL?
-            .appendingPathComponent("Python.framework/Versions/3.13") else {
-            throw PythonError.initializationFailed
-        }
+        let home = try pythonHome()
 
-        let stdlibPath = frameworkPath.appendingPathComponent("lib/python3.13")
-
-        setenv("PYTHONHOME", frameworkPath.path, 1)
-        setenv("PYTHONPATH", stdlibPath.path, 1)
-        setenv("PYTHONDONTWRITEBYTECODE", "1", 1)
-
-        guard PythonBridge_initialize() else {
+        guard PythonBridge_initialize(home) else {
             throw PythonError.initializationFailed
         }
 
         isInitialized = true
+    }
+
+    /// Locates `PYTHONHOME` for the running platform.
+    ///
+    /// - macOS: the standard library ships *inside* the embedded
+    ///   `Python.framework`, so home is `Python.framework/Versions/3.13`.
+    /// - iOS (and other embedded Apple platforms): the app's "Prepare Python"
+    ///   build phase stages the standard library into `<bundle>/python`
+    ///   (see the README for the required build phase).
+    private static func pythonHome() throws -> String {
+        #if os(macOS)
+        guard let home = Bundle.main.privateFrameworksURL?
+            .appendingPathComponent("Python.framework/Versions/3.13") else {
+            throw PythonError.initializationFailed
+        }
+        return home.path
+        #else
+        guard let resourceURL = Bundle.main.resourceURL else {
+            throw PythonError.initializationFailed
+        }
+        return resourceURL.appendingPathComponent("python").path
+        #endif
     }
 
     /// Executes Python source and returns whatever it printed to stdout/stderr.

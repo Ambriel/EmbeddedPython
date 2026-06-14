@@ -3,11 +3,51 @@
 #include <Python/Python.h>
 #include <string.h>
 
-bool PythonBridge_initialize(void) {
+bool PythonBridge_initialize(const char *pythonHome) {
     if (Py_IsInitialized()) {
         return true;
     }
-    Py_Initialize();
+
+    PyStatus status;
+
+    // Pre-initialize so we can force UTF-8 mode (matches BeeWare's reference
+    // iOS configuration; keeps stdout/stderr/filesystem encodings predictable).
+    PyPreConfig preconfig;
+    PyPreConfig_InitPythonConfig(&preconfig);
+    preconfig.utf8_mode = 1;
+    status = Py_PreInitialize(&preconfig);
+    if (PyStatus_Exception(status)) {
+        return false;
+    }
+
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+    // The app bundle is read-only / code-signed, so .pyc files can't be written
+    // next to the stdlib.
+    config.write_bytecode = 0;
+    // Flush output promptly rather than buffering it.
+    config.buffered_stdio = 0;
+
+    if (pythonHome != NULL) {
+        wchar_t *home = Py_DecodeLocale(pythonHome, NULL);
+        if (home == NULL) {
+            PyConfig_Clear(&config);
+            return false;
+        }
+        status = PyConfig_SetString(&config, &config.home, home);
+        PyMem_RawFree(home);
+        if (PyStatus_Exception(status)) {
+            PyConfig_Clear(&config);
+            return false;
+        }
+    }
+
+    status = Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
+    if (PyStatus_Exception(status)) {
+        return false;
+    }
+
     return Py_IsInitialized() != 0;
 }
 
